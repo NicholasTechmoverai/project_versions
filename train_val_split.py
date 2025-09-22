@@ -65,31 +65,35 @@ print('Images moving to validation: %d' % val_num)
 
 # Select files randomly and copy them to train or val folders
 for i, set_num in enumerate([train_num, val_num]):
-  for ii in range(set_num):
-    img_path = random.choice(img_file_list)
-    img_fn = img_path.name
-    base_fn = img_path.stem
-    txt_fn = base_fn + '.txt'
-    txt_fn = txt_fn.lower()  # normalize case
-    txt_candidates = [os.path.join(input_label_path, txt_fn),
-                      os.path.join(input_label_path, base_fn + '.TXT')]
-    txt_path = next((f for f in txt_candidates if os.path.exists(f)), None)
-    if txt_path and os.path.exists(txt_path):
-        shutil.copy(txt_path, os.path.join(new_txt_path, txt_fn))
-    else:
-        print(f'⚠️ No label found for {img_fn}')
+    for ii in range(set_num):
+        img_path = random.choice(img_file_list)
+        img_fn = img_path.name
+        base_fn = img_path.stem
+        txt_fn = base_fn + '.txt'
 
+        # --- decide target dirs first ---
+        if i == 0:
+            new_img_path, new_txt_path = train_img_path, train_txt_path
+        else:
+            new_img_path, new_txt_path = val_img_path, val_txt_path
 
+        # --- find label candidates (case-insensitive) ---
+        txt_candidates = [
+            os.path.join(input_label_path, txt_fn),
+            os.path.join(input_label_path, base_fn + '.TXT'),
+            os.path.join(input_label_path, base_fn + '.txt')
+        ]
+        txt_path = next((f for f in txt_candidates if os.path.exists(f)), None)
 
-    if i == 0: # Copy first set of files to train folders
-      new_img_path, new_txt_path = train_img_path, train_txt_path
-    elif i == 1: # Copy second set of files to the validation folders
-      new_img_path, new_txt_path = val_img_path, val_txt_path
+        # --- copy image ---
+        shutil.copy(img_path, os.path.join(new_img_path, img_fn))
 
-    shutil.copy(img_path, os.path.join(new_img_path,img_fn))
-    #os.rename(img_path, os.path.join(new_img_path,img_fn))
-    if os.path.exists(txt_path): # If txt path does not exist, this is a background image, so skip txt file
-      shutil.copy(txt_path,os.path.join(new_txt_path,txt_fn))
-      #os.rename(txt_path,os.path.join(new_txt_path,txt_fn))
+        # --- copy label if found ---
+        if txt_path:
+            shutil.copy(txt_path, os.path.join(new_txt_path, os.path.basename(txt_path)))
+        else:
+            print(f'⚠️ No label found for {img_fn}')
 
-    img_file_list.remove(img_path)
+        # remove from pool
+        img_file_list.remove(img_path)
+
